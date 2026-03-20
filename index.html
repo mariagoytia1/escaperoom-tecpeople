@@ -1456,22 +1456,22 @@ function updateDots(cur){
 const SHEETS_URL = "https://script.google.com/macros/s/AKfycbzIyezC-gHM9f6oIEQRDG2N4XuHNLyFFci1ZzYay3zb1838w1eMEfB20dWG7x9QznNL6w/exec";
 
 async function sendResult(completado){
-  if(!SHEETS_URL || SHEETS_URL === "PEGAR_URL_AQUI") return; // no configurado aún
+  if(!SHEETS_URL || SHEETS_URL === "PEGAR_URL_AQUI") return;
   const e = 300 - G.timeLeft;
   try {
-    await fetch(SHEETS_URL, {
-      method: "POST",
-      mode:   "no-cors", // necesario para Apps Script
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        nombre:         G.player,
-        area:           document.getElementById('inp-area')?.value?.trim() || G.area || "",
-        codigoClase:    document.getElementById('inp-code')?.value?.trim() || G.code || "",
-        completado:     completado,
-        tiempoFinal:    elapsed(),
-        tiempoSegundos: e,
-        salaAlcanzada:  G.room,
-      })
+    const params = new URLSearchParams({
+      nombre:          G.player,
+      area:            G.area || "",
+      codigoClase:     G.code || "",
+      completado:      completado ? "SI" : "NO",
+      tiempoFinal:     elapsed(),
+      tiempoSegundos:  e,
+      salaAlcanzada:   G.room,
+    });
+    // GET request — evita el 401 de Apps Script con no-cors
+    await fetch(SHEETS_URL + "?" + params.toString(), {
+      method: "GET",
+      mode:   "no-cors",
     });
   } catch(err){
     console.warn("No se pudo guardar el resultado:", err);
