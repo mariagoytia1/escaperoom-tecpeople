@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TecPeople — Escape Room Eléctrico</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Black+Han+Sans&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:       #0b0c0e;
+  --room:     #111318;
+  --surface:  #181b22;
+  --border:   #2a2d38;
+  --amber:    #d4820a;
+  --amber2:   #f0a030;
+  --amber-dim:#5a3a08;
+  --red:      #b82020;
+  --red2:     #e04040;
+  --green:    #1a7a40;
+  --green2:   #30c060;
+  --blue:     #1a3a7a;
+  --blue2:    #4080d0;
+  --text:     #c8c0a0;
+  --text-dim: #6a6050;
+  --white:    #e8e0c8;
+  --glow-a:   rgba(212,130,10,0.35);
+  --glow-r:   rgba(184,32,32,0.4);
+  --glow-g:   rgba(26,122,64,0.4);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:'Share Tech Mono',monospace;color:var(--text);}
+
+/* ══════════════════════════════════════════
+   OVERLAYS — CRT + NOISE
+══════════════════════════════════════════ */
+#crt{position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.1) 3px,rgba(0,0,0,0.1) 4px);}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:9998;
+  background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,rgba(0,0,0,0.75) 100%);}
+
+/* ══════════════════════════════════════════
+   REGISTER
+══════════════════════════════════════════ */
+#scr-reg{
+  position:fixed;inset:0;z-index:500;
+  background:radial-gradient(ellipse 120% 100% at 50% 100%,#1a1205 0%,#060608 60%);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.reg-card{
+  width:100%;max-width:460px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  position:relative;overflow:hidden;
+}
+.reg-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--amber),transparent);
+}
+.reg-top{
+  padding:32px 32px 24px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+}
+.reg-eyebrow{
+  font-size:10px;letter-spacing:5px;color:var(--amber);text-transform:uppercase;margin-bottom:12px;
+}
+.reg-h1{
+  font-family:'Black Han Sans',sans-serif;
+  font-size:clamp(36px,7vw,58px);
+  color:var(--white);line-height:0.9;letter-spacing:2px;
+  text-shadow:0 0 40px var(--glow-a);margin-bottom:10px;
+}
+.reg-h1 span{color:var(--amber2);}
+.reg-sub{font-size:11px;color:var(--text-dim);letter-spacing:2px;line-height:1.6;}
+.reg-alert{
+  margin:16px 32px 0;
+  padding:10px 14px;
+  background:rgba(184,32,32,0.08);
+  border:1px solid rgba(184,32,32,0.3);
+  font-size:11px;color:#c86060;line-height:1.6;
+}
+.reg-alert b{color:#e08080;}
+.reg-fields{padding:20px 32px;display:flex;flex-direction:column;gap:14px;}
+.f-lbl{font-size:9px;letter-spacing:3px;color:var(--text-dim);margin-bottom:4px;display:block;}
+.f-inp{
+  width:100%;background:#0a0b0d;border:1px solid var(--border);
+  color:var(--white);padding:11px 14px;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.f-inp:focus{border-color:var(--amber);box-shadow:0 0 0 2px rgba(212,130,10,0.15);}
+.f-inp::placeholder{color:var(--text-dim);}
+.reg-btn{
+  display:block;width:calc(100% - 64px);margin:0 32px 28px;
+  background:var(--amber);color:#06060a;
+  border:none;padding:14px;cursor:pointer;
+  font-family:'Black Han Sans',sans-serif;font-size:15px;letter-spacing:4px;
+  text-transform:uppercase;transition:all .2s;
+}
+.reg-btn:hover{background:var(--amber2);box-shadow:0 0 24px var(--glow-a);}
+
+/* ══════════════════════════════════════════
+   GAME SHELL
+══════════════════════════════════════════ */
+#game{display:none;flex-direction:column;height:100vh;}
+#game.on{display:flex;}
+
+/* HUD */
+#hud{
+  height:52px;flex-shrink:0;
+  background:#0a0b0d;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:16px;
+  position:relative;z-index:100;
+}
+.hud-brand{
+  font-family:'Black Han Sans',sans-serif;
+  font-size:16px;letter-spacing:3px;color:var(--amber);
+  margin-right:4px;white-space:nowrap;
+}
+#hud-dots{display:flex;gap:5px;align-items:center;flex:1;}
+.dot{
+  width:9px;height:9px;border-radius:50%;
+  background:var(--border);transition:all .4s;
+}
+.dot.done{background:var(--green2);box-shadow:0 0 7px var(--glow-g);}
+.dot.now{background:var(--amber2);box-shadow:0 0 9px var(--glow-a);animation:dpulse 1.4s ease-in-out infinite alternate;}
+@keyframes dpulse{from{box-shadow:0 0 4px var(--glow-a)}to{box-shadow:0 0 14px rgba(240,160,48,.7)}}
+#hud-timer{
+  font-family:'Courier Prime',monospace;font-weight:700;
+  font-size:28px;color:var(--amber2);letter-spacing:2px;
+  text-shadow:0 0 16px var(--glow-a);white-space:nowrap;
+}
+#hud-timer.warn{color:var(--red2);text-shadow:0 0 16px var(--glow-r);animation:tblink .55s step-end infinite;}
+@keyframes tblink{50%{opacity:.15}}
+.hud-info{text-align:right;white-space:nowrap;}
+.hud-room{font-size:10px;letter-spacing:2px;color:var(--amber);line-height:1.2;}
+.hud-name{font-size:9px;color:var(--text-dim);}
+
+/* MAIN AREA */
+#area{flex:1;display:flex;overflow:hidden;position:relative;}
+
+/* ROOM VIEWPORT */
+#viewport{flex:1;position:relative;overflow:hidden;}
+.room{position:absolute;inset:0;display:none;}
+.room.active{display:block;}
+
+/* SIDEBAR */
+#sidebar{
+  width:280px;flex-shrink:0;
+  background:var(--surface);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sb-tab{
+  flex-shrink:0;padding:10px 14px;
+  border-bottom:1px solid var(--border);
+  font-size:9px;letter-spacing:3px;color:var(--amber);
+  background:#111318;
+}
+.sb-log{
+  flex:1;overflow-y:auto;padding:10px;
+  display:flex;flex-direction:column;gap:6px;
+}
+.sb-log::-webkit-scrollbar{width:3px;}
+.sb-log::-webkit-scrollbar-thumb{background:var(--border);}
+.log-line{
+  font-size:11px;line-height:1.55;
+  border-left:2px solid var(--border);
+  padding:5px 9px;animation:logIn .25s ease;
+}
+@keyframes logIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+.log-line.narr{border-color:var(--text-dim);color:var(--text-dim);font-style:italic;}
+.log-line.sys{border-color:var(--blue);color:#5a90c8;font-size:10px;}
+.log-line.clue{border-color:var(--amber);color:var(--amber2);}
+.log-line.ok{border-color:var(--green);color:var(--green2);}
+.log-line.err{border-color:var(--red);color:var(--red2);}
+/* Clue notebook */
+#notebook{margin:0 10px 10px;border:1px solid var(--border);flex-shrink:0;}
+.nb-head{font-size:9px;letter-spacing:3px;color:var(--amber);padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(212,130,10,.04);}
+.nb-body{max-height:180px;overflow-y:auto;}
+.nb-item{
+  padding:7px 10px;font-size:10px;line-height:1.5;
+  display:flex;gap:7px;border-bottom:1px solid rgba(42,45,56,.5);
+  color:var(--text);
+}
+.nb-item:last-child{border-bottom:none;}
+.nb-bull{color:var(--amber);flex-shrink:0;}
+.nb-item.lock{color:var(--text-dim);}
+.nb-item.lock .nb-bull{color:var(--border);}
+
+/* ══════════════════════════════════════════
+   HOTSPOTS
+══════════════════════════════════════════ */
+.hs{
+  position:absolute;cursor:pointer;
+  transition:all .15s;
+}
+.hs:hover .hs-ring{opacity:1;}
+.hs:hover .hs-tip{opacity:1;transform:translateX(-50%) translateY(0);}
+.hs-ring{
+  position:absolute;inset:-7px;
+  border:1.5px solid rgba(212,130,10,.65);
+  opacity:0;transition:opacity .2s;
+  box-shadow:0 0 16px rgba(212,130,10,.25);
+}
+.hs-tip{
+  position:absolute;bottom:calc(100% + 11px);left:50%;
+  transform:translateX(-50%) translateY(5px);
+  background:rgba(6,6,10,.97);border:1px solid var(--amber);
+  color:var(--amber);font-size:9px;letter-spacing:2px;
+  padding:4px 9px;white-space:nowrap;opacity:0;
+  transition:all .2s;pointer-events:none;
+}
+.hs-tip::after{
+  content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:4px solid transparent;border-top-color:var(--amber);
+}
+.hs.seen .hs-ring{border-color:rgba(26,122,64,.5);}
+.hs.seen .hs-tip{border-color:var(--green2);color:var(--green2);}
+
+/* ══════════════════════════════════════════
+   PUZZLE PANEL (full screen overlay)
+══════════════════════════════════════════ */
+#puz-overlay{
+  display:none;position:absolute;inset:0;
+  background:rgba(0,0,0,.88);backdrop-filter:blur(4px);
+  z-index:300;align-items:center;justify-content:center;padding:20px;
+}
+#puz-overlay.open{display:flex;animation:fadein .2s ease;}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.puz-card{
+  background:var(--surface);border:1px solid var(--border);
+  max-width:540px;width:100%;max-height:82vh;overflow-y:auto;
+  position:relative;
+}
+.puz-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);}
+.puz-hdr{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  background:#111318;position:sticky;top:0;z-index:1;
+}
+.puz-tag{font-size:9px;letter-spacing:3px;color:var(--amber);}
+.puz-x{
+  background:none;border:1px solid var(--border);color:var(--text-dim);
+  cursor:pointer;padding:3px 9px;font-size:11px;
+  font-family:'Share Tech Mono',monospace;transition:all .15s;
+}
+.puz-x:hover{border-color:var(--red);color:var(--red2);}
+.puz-body{padding:16px;}
+.puz-title{
+  font-family:'Black Han Sans',sans-serif;
+  font-size:22px;color:var(--white);margin-bottom:5px;letter-spacing:1px;
+}
+.puz-flavor{
+  font-size:11px;color:var(--text-dim);line-height:1.7;
+  margin-bottom:16px;padding-left:10px;
+  border-left:2px solid var(--border);font-style:italic;
+}
+/* Questions */
+.qnum{font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;}
+.qtext{font-size:13px;color:var(--white);line-height:1.6;margin-bottom:9px;}
+/* TF */
+.tf-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;}
+.tf-btn{
+  padding:9px;border:1px solid var(--border);
+  background:rgba(0,0,0,.3);cursor:pointer;
+  font-size:12px;color:var(--text);text-align:center;
+  letter-spacing:1px;transition:all .12s;
+  font-family:'Share Tech Mono',monospace;
+}
+.tf-btn:hover{border-color:var(--amber);}
+.tf-btn.vsel{border-color:var(--green);color:var(--green2);background:rgba(26,122,64,.1);}
+.tf-btn.fsel{border-color:var(--red);color:var(--red2);background:rgba(184,32,32,.1);}
+/* MC */
+.mc-row{
+  display:flex;gap:9px;align-items:flex-start;
+  border:1px solid var(--border);padding:9px 12px;
+  cursor:pointer;margin-bottom:6px;font-size:12px;
+  background:rgba(0,0,0,.3);transition:all .12s;line-height:1.5;
+  color:var(--text);
+}
+.mc-row:hover{border-color:var(--amber);}
+.mc-row.sel{border-color:var(--amber);color:var(--amber2);background:rgba(212,130,10,.07);}
+.mc-let{color:var(--text-dim);flex-shrink:0;font-size:10px;margin-top:2px;}
+/* Sequence */
+.seq-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px;}
+.sq-btn{
+  border:1px solid var(--border);background:rgba(0,0,0,.4);
+  padding:11px 5px;text-align:center;cursor:pointer;transition:all .12s;
+}
+.sq-btn:hover{border-color:var(--amber);}
+.sq-btn.in{border-color:var(--amber);background:rgba(212,130,10,.07);}
+.sq-icon{font-size:20px;margin-bottom:3px;}
+.sq-lbl{font-size:8px;color:var(--text-dim);letter-spacing:1px;}
+.sq-btn.in .sq-lbl{color:var(--amber);}
+.seq-track{
+  display:flex;flex-wrap:wrap;gap:4px;
+  border:1px dashed var(--border);padding:7px 10px;min-height:34px;margin-bottom:9px;align-items:center;
+}
+.seq-chip{
+  padding:2px 8px;border:1px solid var(--amber);
+  color:var(--amber);font-size:9px;letter-spacing:1px;
+  animation:popin .12s ease;
+}
+@keyframes popin{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.seq-empty{font-size:10px;color:var(--border);font-style:italic;}
+/* Wire */
+.wire-grid{display:grid;grid-template-columns:1fr 56px 1fr;align-items:center;}
+.wire-col{display:flex;flex-direction:column;gap:7px;}
+.wn-l,.wn-r{
+  padding:8px 11px;border:1px solid var(--border);font-size:10px;
+  cursor:pointer;transition:all .12s;color:var(--text);
+}
+.wn-l:hover,.wn-r:hover{border-color:var(--amber);}
+.wn-l.act{border-color:var(--amber);color:var(--amber2);box-shadow:0 0 8px rgba(212,130,10,.3);}
+.wn-l.done,.wn-r.done{border-color:var(--green);color:var(--green2);}
+.wire-svg{width:56px;height:212px;overflow:visible;}
+/* Calc */
+.calc-block{margin-bottom:14px;}
+.calc-hint{font-size:10px;color:var(--amber);opacity:.75;margin-bottom:6px;text-align:center;}
+.calc-inp{
+  width:100%;background:#0a0b0d;border:1px solid var(--border);
+  color:var(--amber2);padding:11px;font-family:'Share Tech Mono',monospace;
+  font-size:20px;outline:none;text-align:center;letter-spacing:2px;
+  transition:border-color .2s;margin-bottom:2px;
+}
+.calc-inp:focus{border-color:var(--amber);}
+/* Combo */
+.combo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;}
+.cb-item{
+  border:1px solid var(--border);background:rgba(0,0,0,.4);
+  padding:11px 5px;text-align:center;cursor:pointer;transition:all .12s;
+}
+.cb-item:hover{border-color:var(--amber);}
+.cb-item.sel{border-color:var(--amber);background:rgba(212,130,10,.07);}
+.cb-icon{font-size:22px;margin-bottom:3px;}
+.cb-lbl{font-size:9px;color:var(--text-dim);letter-spacing:1px;line-height:1.3;}
+.cb-item.sel .cb-lbl{color:var(--amber);}
+.combo-track{
+  display:flex;flex-wrap:wrap;gap:4px;align-items:center;
+  border:1px dashed var(--border);padding:7px 10px;min-height:34px;margin-bottom:10px;
+}
+/* Puz alert */
+#puz-alert{margin:0 16px 10px;}
+.palert{
+  padding:9px 12px;font-size:11px;line-height:1.5;border:1px solid;
+}
+.palert.err{border-color:rgba(184,32,32,.4);color:var(--red2);background:rgba(184,32,32,.06);}
+.palert.ok{border-color:rgba(26,122,64,.4);color:var(--green2);background:rgba(26,122,64,.06);}
+/* Puz footer */
+.puz-foot{
+  padding:12px 16px;border-top:1px solid var(--border);
+  display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap;
+}
+.pb{
+  background:none;border:1px solid;
+  padding:8px 18px;cursor:pointer;
+  font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;
+  text-transform:uppercase;transition:all .12s;
+}
+.pb.pri{border-color:var(--amber);color:var(--amber);}
+.pb.pri:hover{background:var(--amber);color:#06060a;}
+.pb.sec{border-color:var(--border);color:var(--text-dim);}
+.pb.sec:hover{border-color:var(--text-dim);}
+
+/* ══════════════════════════════════════════
+   ROOM UNLOCK FLASH
+══════════════════════════════════════════ */
+.room-flash{position:absolute;inset:0;background:var(--amber);opacity:0;pointer-events:none;}
+.room-flash.go{animation:rflash .5s ease forwards;}
+@keyframes rflash{0%{opacity:0}25%{opacity:.22}100%{opacity:0}}
+
+/* ══════════════════════════════════════════
+   UNLOCK CINEMATIC
+══════════════════════════════════════════ */
+#cinematic{
+  display:none;position:absolute;inset:0;
+  background:rgba(0,0,0,.94);z-index:400;
+  align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;
+}
+#cinematic.show{display:flex;animation:fadein .3s ease;}
+.cin-icon{font-size:80px;filter:drop-shadow(0 0 28px rgba(212,130,10,.8));animation:cinpop .45s ease;}
+@keyframes cinpop{0%{transform:scale(.3) rotate(-15deg);opacity:0}70%{transform:scale(1.1) rotate(3deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+.cin-title{font-family:'Black Han Sans',sans-serif;font-size:clamp(26px,4vw,42px);color:var(--amber2);letter-spacing:2px;text-shadow:0 0 28px var(--glow-a);}
+.cin-sub{font-size:11px;color:var(--text-dim);letter-spacing:3px;}
+
+/* ══════════════════════════════════════════
+   EXAMINE MODAL
+══════════════════════════════════════════ */
+#exam-overlay{
+  display:none;position:absolute;inset:0;
+  background:rgba(0,0,0,.82);backdrop-filter:blur(3px);
+  z-index:350;align-items:flex-end;justify-content:center;padding:20px;
+}
+#exam-overlay.open{display:flex;animation:fadein .2s ease;}
+.exam-card{
+  background:var(--surface);border:1px solid var(--amber-dim);
+  max-width:500px;width:100%;
+  position:relative;
+}
+.exam-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);}
+.exam-hdr{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#111318;}
+.exam-title{font-size:11px;letter-spacing:3px;color:var(--amber);}
+.exam-close{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:2px 6px;}
+.exam-body{padding:14px 16px;font-size:12px;color:var(--text);line-height:1.7;}
+.exam-body b{color:var(--amber2);}
+
+/* ══════════════════════════════════════════
+   END SCREENS
+══════════════════════════════════════════ */
+#scr-win,#scr-lose{
+  display:none;position:fixed;inset:0;z-index:600;
+  background:radial-gradient(ellipse 110% 110% at 50% 50%,#12100a 0%,#05050a 100%);
+  align-items:center;justify-content:center;flex-direction:column;
+  padding:20px;text-align:center;overflow-y:auto;
+}
+#scr-win.show,#scr-lose.show{display:flex;animation:fadein .5s ease;}
+.end-icon{font-size:72px;margin-bottom:14px;filter:drop-shadow(0 0 28px rgba(212,130,10,.6));}
+.end-title{font-family:'Black Han Sans',sans-serif;font-size:clamp(30px,5vw,54px);margin-bottom:6px;letter-spacing:2px;}
+.end-sub{font-size:11px;color:var(--text-dim);letter-spacing:3px;margin-bottom:24px;}
+.end-stats{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);padding:14px 22px;min-width:100px;}
+.stat-v{font-family:'Black Han Sans',sans-serif;font-size:34px;color:var(--amber2);display:block;line-height:1;}
+.stat-l{font-size:9px;color:var(--text-dim);letter-spacing:2px;margin-top:4px;display:block;}
+.rank-panel{background:var(--surface);border:1px solid var(--border);max-width:480px;width:100%;margin-bottom:20px;}
+.rank-head{font-size:9px;letter-spacing:3px;color:var(--amber);padding:7px 12px;border-bottom:1px solid var(--border);background:#111318;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:9px;letter-spacing:2px;color:var(--text-dim);padding:7px 11px;border-bottom:1px solid var(--border);text-align:left;}
+td{padding:7px 11px;font-size:11px;border-bottom:1px solid rgba(42,45,56,.4);}
+tr:last-child td{border-bottom:none;}
+tr.me td{color:var(--amber2);}
+.retry-btn{
+  background:none;border:1px solid var(--amber);color:var(--amber);
+  padding:11px 26px;font-family:'Black Han Sans',sans-serif;
+  font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;
+}
+.retry-btn:hover{background:var(--amber);color:#06060a;}
+
+/* ══════════════════════════════════════════
+   ROOM SCENES — CSS ART
+══════════════════════════════════════════ */
+/* Shared floor/wall helpers */
+.r-floor{position:absolute;bottom:0;left:0;right:0;height:27%;}
+.r-wall-l{position:absolute;top:0;left:0;width:10%;height:100%;}
+.r-wall-r{position:absolute;top:0;right:0;width:10%;height:100%;}
+.r-ceiling-light{position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:0;}
+
+/* ——— ROOM 1: Sala de Breakers ——— */
+#r1{background:linear-gradient(175deg,#0c0e0a 0%,#141208 55%,#0a0a06 100%);}
+/* floor */
+#r1 .r-floor{background:linear-gradient(180deg,#181408,#0c0a04);border-top:2px solid #2a2410;}
+/* walls */
+#r1 .r-wall-l,#r1 .r-wall-r{background:linear-gradient(90deg,#0a0a06,#161208);border-right:1px solid #252010;}
+#r1 .r-wall-r{background:linear-gradient(-90deg,#0a0a06,#161208);border-right:none;border-left:1px solid #252010;}
+/* ceiling cone */
+#r1 .r-ceiling-light{border-left:100px solid transparent;border-right:100px solid transparent;border-top:180px solid rgba(212,160,40,.03);}
+/* Breaker cabinet */
+.brk-cabinet{
+  position:absolute;top:8%;left:50%;transform:translateX(-50%);
+  width:260px;height:300px;
+  background:linear-gradient(170deg,#282010,#181208);
+  border:3px solid #4a3e18;
+  box-shadow:0 0 50px rgba(0,0,0,.85),inset 0 0 20px rgba(0,0,0,.5);
+}
+.brk-label{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:2px;color:#4a3e18;white-space:nowrap;}
+.brk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:16px 12px;}
+.brk{height:48px;background:#140e06;border:1px solid #382a10;position:relative;}
+.brk .brk-handle{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:9px;height:28px;background:#282010;border-radius:1px;}
+.brk.trip .brk-handle{background:#b82020;box-shadow:0 0 6px rgba(184,32,32,.65);}
+.brk-alarm{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#b82020;box-shadow:0 0 10px rgba(184,32,32,.9);animation:alm 1.6s step-end infinite;}
+@keyframes alm{0%,44%{opacity:1}45%,94%{opacity:.15}}
+/* Desk */
+.r1-desk{position:absolute;bottom:27%;left:12%;width:210px;}
+.r1-desk-top{height:7px;background:#3a2810;margin:0 -4px;}
+.r1-desk-body{height:56px;background:linear-gradient(180deg,#2a1e0c,#181208);border:1px solid #3a2810;border-bottom:none;position:relative;}
+/* Warning sticker */
+.warn-sticker{
+  position:absolute;
+  width:54px;height:36px;
+  background:#b82020;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;transform:rotate(2deg);
+}
+/* Voltmeter on desk */
+.voltmeter{
+  width:68px;height:50px;
+  background:linear-gradient(180deg,#2a2010,#181208);
+  border:2px solid #4a3a18;border-radius:3px;
+  position:relative;display:flex;align-items:center;justify-content:center;
+}
+.voltmeter::after{content:'VOLT';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:6px;color:#4a3a18;letter-spacing:1px;}
+.vm-dial{width:32px;height:20px;background:#0a0800;border:1px solid #3a2a10;border-radius:30% 30% 0 0;}
+/* Manual */
+.manual-paper{
+  width:54px;height:68px;
+  background:linear-gradient(135deg,#c8b87a,#b0a060);
+  border:1px solid #8a7040;transform:rotate(-6deg);
+  position:relative;
+}
+.manual-paper::before{content:'';position:absolute;top:7px;left:5px;right:5px;height:1px;background:#8a7040;box-shadow:0 5px 0 #8a7040,0 10px 0 #8a7040,0 15px 0 #8a7040,0 20px 0 #8a7040;}
+.manual-paper::after{content:'MANUAL';position:absolute;bottom:4px;right:5px;font-size:7px;color:#6a5830;}
+/* Fuse box on wall */
+.fusebox{
+  position:absolute;top:22%;right:14%;
+  width:76px;height:96px;
+  background:linear-gradient(180deg,#2a2010,#181208);
+  border:2px solid #3a2a10;
+}
+.fuse{position:absolute;width:9px;height:16px;background:#3a2a10;border:1px solid #5a4a28;border-radius:2px;}
+/* cable on floor */
+.cable{position:absolute;bottom:27%;left:0;right:0;height:3px;background:repeating-linear-gradient(90deg,#2a1e08 0,#2a1e08 18px,#181008 18px,#181008 22px);opacity:.5;}
+
+/* ——— ROOM 2: Taller ——— */
+#r2{background:linear-gradient(175deg,#080e0a 0%,#0c1408 55%,#08100a 100%);}
+#r2 .r-floor{background:linear-gradient(180deg,#0e1408,#080c04);border-top:1px solid #1a2010;}
+#r2 .r-wall-l,#r2 .r-wall-r{background:linear-gradient(90deg,#060a04,#0c1408);border-right:1px solid #1a2010;}
+#r2 .r-wall-r{background:linear-gradient(-90deg,#060a04,#0c1408);border-right:none;border-left:1px solid #1a2010;}
+.r2-light{position:absolute;top:14%;left:10%;right:10%;height:3px;background:linear-gradient(90deg,transparent,#1a9e40,#1a9e40,transparent);box-shadow:0 0 18px rgba(26,158,64,.3);}
+.r2-shelf{position:absolute;top:18%;left:8%;right:8%;height:24px;background:#1a2010;border:1px solid #2a3418;}
+.r2-schematic{
+  position:absolute;
+  width:130px;height:110px;
+  background:#1a1a10;border:1px solid #3a3018;padding:8px;
+}
+.r2-wb{position:absolute;bottom:27%;left:8%;right:8%;}
+.r2-wb-top{height:9px;background:#2a3418;margin:0 -5px;}
+.r2-wb-body{height:60px;background:linear-gradient(180deg,#1a2010,#0e1408);border:1px solid #2a3418;border-bottom:none;position:relative;}
+.toolbox{
+  width:74px;height:48px;
+  background:#181408;border:2px solid #3a2810;
+  position:relative;display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.toolbox::before{content:'';position:absolute;top:-8px;left:10px;right:10px;height:9px;background:#2a2010;border-radius:3px 3px 0 0;border:1px solid #3a2810;border-bottom:none;}
+.assemble-spot{
+  width:96px;height:52px;
+  background:#0e1408;border:2px solid #2a3418;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+}
+.assemble-spot span{font-size:9px;color:#3a5028;letter-spacing:1px;}
+
+/* ——— ROOM 3: Checkpoint ——— */
+#r3{background:linear-gradient(175deg,#08080e 0%,#0d0d16 55%,#06060e 100%);}
+#r3 .r-floor{background:linear-gradient(180deg,#0d0d16,#060610);border-top:1px solid #1a1a3a;}
+#r3 .r-wall-l,#r3 .r-wall-r{background:linear-gradient(90deg,#060610,#0c0c18);border-right:1px solid #1a1a3a;}
+#r3 .r-wall-r{background:linear-gradient(-90deg,#060610,#0c0c18);border-right:none;border-left:1px solid #1a1a3a;}
+.r3-monitor{
+  position:absolute;top:8%;left:50%;transform:translateX(-50%);
+  width:310px;height:210px;
+  background:#040410;border:3px solid #1a1a40;
+  box-shadow:0 0 30px rgba(0,60,180,.18),inset 0 0 30px rgba(0,20,60,.3);overflow:hidden;
+}
+.r3-scanline{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(60,120,255,.55),transparent);animation:scan 3s linear infinite;}
+@keyframes scan{from{top:0}to{top:210px}}
+.r3-monitor-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+.r3-keypad{
+  position:absolute;top:12%;right:8%;
+  width:82px;height:122px;
+  background:#0c0c18;border:2px solid #1a1a40;padding:8px;
+}
+.r3-kp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;}
+.kp-btn{background:#0a0a14;border:1px solid #1a1a40;height:14px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#202060;}
+.r3-badge{
+  position:absolute;top:52%;left:12%;
+  width:50px;height:72px;
+  background:#0c0c18;border:2px solid #1a1a40;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+}
+.badge-light{width:28px;height:3px;background:#b82020;box-shadow:0 0 6px rgba(184,32,32,.6);animation:alm 2s step-end infinite;}
+.r3-protocol{
+  position:absolute;top:54%;right:15%;
+  width:70px;height:90px;
+  background:#0c0c18;border:1px solid #1a1a40;padding:6px;transform:rotate(3deg);
+}
+
+/* ——— ROOM 4: Tablero Control ——— */
+#r4{background:linear-gradient(175deg,#060608 0%,#0a0a14 55%,#040408 100%);}
+#r4 .r-floor{background:linear-gradient(180deg,#0a0a14,#040408);border-top:1px solid #1a1a2a;}
+#r4 .r-wall-l,#r4 .r-wall-r{background:linear-gradient(90deg,#040408,#080810);border-right:1px solid #1a1a2a;}
+#r4 .r-wall-r{background:linear-gradient(-90deg,#040408,#080810);border-right:none;border-left:1px solid #1a1a2a;}
+.r4-bigpanel{
+  position:absolute;top:6%;left:13%;right:13%;height:66%;
+  background:linear-gradient(175deg,#1a1a2a,#0e0e1a);
+  border:3px solid #2a2a44;box-shadow:0 0 40px rgba(0,50,110,.2);
+}
+.r4-leds{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:12px;}
+.r4-led{background:#0a0a14;border:1px solid #1a1a30;height:26px;display:flex;align-items:center;justify-content:center;gap:3px;font-size:7px;color:#1a1a40;letter-spacing:1px;}
+.r4-sw-row{display:flex;gap:5px;padding:0 12px 12px;}
+.r4-sw{flex:1;background:#0a0a14;border:1px solid #1a1a30;padding:5px;text-align:center;}
+.r4-sw-handle{height:26px;background:#0c0c1a;border:1px solid #1a1a40;margin-bottom:3px;position:relative;}
+.r4-sw-handle::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:17px;background:#2a2a44;border-radius:1px;}
+.r4-sw-lbl{font-size:6px;color:#1a1a40;letter-spacing:1px;}
+.r4-logbook{
+  position:absolute;bottom:29%;left:5%;
+  width:60px;height:76px;
+  background:#181408;border:2px solid #3a2810;border-left:5px solid #8a3e10;
+}
+
+/* ——— ROOM 5: Cableado ——— */
+#r5{background:linear-gradient(175deg,#080508 0%,#10080e 55%,#060408 100%);}
+#r5 .r-floor{background:linear-gradient(180deg,#10080e,#060408);border-top:1px solid #1a1018;}
+#r5 .r-wall-l,#r5 .r-wall-r{background:linear-gradient(90deg,#060408,#100810);border-right:1px solid #1a1018;}
+#r5 .r-wall-r{background:linear-gradient(-90deg,#060408,#100810);border-right:none;border-left:1px solid #1a1018;}
+.r5-wallpanel{position:absolute;top:10%;left:17%;right:17%;height:62%;background:#1a1018;border:2px solid #2a1a2a;}
+.r5-conduit{position:absolute;top:0;left:50%;transform:translateX(-50%);width:42px;height:26px;background:#1a1018;border:1px solid #2a1a28;border-bottom:none;overflow:hidden;}
+.wire-r{position:absolute;bottom:0;left:7px;width:4px;height:30px;background:linear-gradient(180deg,#b82020,#700000);}
+.wire-n{position:absolute;bottom:0;left:17px;width:4px;height:30px;background:linear-gradient(180deg,#c0c0c0,#787878);}
+.wire-g{position:absolute;bottom:0;left:27px;width:4px;height:30px;background:linear-gradient(180deg,#1a7a3a,#0e4020);}
+.r5-danger{
+  position:absolute;bottom:30%;right:11%;
+  width:68px;height:50px;
+  background:#3a0808;border:2px solid #b82020;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+}
+
+/* ——— ROOM 6: Bóveda ——— */
+#r6{background:radial-gradient(ellipse at 50% 50%,#100c06 0%,#060400 100%);}
+#r6 .r-floor{background:linear-gradient(180deg,#100c06,#060400);border-top:1px solid #2a2010;}
+.r6-goldline{position:absolute;bottom:27%;left:50%;transform:translateX(-50%);width:260px;height:3px;background:linear-gradient(90deg,transparent,rgba(212,130,10,.3),transparent);filter:blur(3px);}
+.vault-door{
+  position:absolute;top:8%;left:50%;transform:translateX(-50%);
+  width:250px;height:290px;
+  background:linear-gradient(135deg,#2a2010,#1a1408);
+  border:6px solid #4a3818;
+  border-radius:48% 48% 48% 48% / 8% 8% 8% 8%;
+  box-shadow:0 0 40px rgba(0,0,0,.85),inset 0 0 30px rgba(0,0,0,.6);
+}
+.vault-wheel{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:116px;height:116px;border-radius:50%;
+  border:6px solid #5a4828;
+  background:radial-gradient(circle,#2a2010,#1a1408);
+}
+.vault-spoke-h,.vault-spoke-v{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#5a4828;}
+.vault-spoke-h{width:90%;height:5px;}
+.vault-spoke-v{width:5px;height:90%;}
+.vault-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#4a3818;border:3px solid #6a5830;}
+.vault-combo{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);display:flex;gap:5px;}
+.vault-digit{width:26px;height:30px;background:#0a0800;border:1px solid #3a2810;display:flex;align-items:center;justify-content:center;font-family:'Courier Prime',monospace;font-size:17px;font-weight:700;color:#4a3a20;}
+.r6-note{
+  position:absolute;bottom:30%;left:7%;
+  width:70px;height:88px;
+  background:#c8b87a;border:1px solid #8a7040;
+  padding:7px;transform:rotate(-7deg);
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media(max-width:680px){
+  #sidebar{display:none;}
+  #puz-overlay{align-items:flex-end;}
+  .puz-card{max-height:88vh;}
+  #hud{padding:0 10px;gap:10px;}
+  #hud-timer{font-size:22px;}
+}
+</style>
+</head>
+<body>
+<div id="crt"></div><div id="vig"></div>
+
+<!-- ═══════ REGISTER ═══════ -->
+<div id="scr-reg">
+  <div class="reg-card">
+    <div class="reg-top">
+      <div class="reg-eyebrow">TecPeople · Módulo Electricidad</div>
+      <div class="reg-h1">ESCAPE<br><span>ROOM</span></div>
+      <div class="reg-sub">⚡ &nbsp; 6 salas · 5 minutos · 1 sola salida &nbsp; ⚡</div>
+    </div>
+    <div class="reg-alert">
+      <b>⚠ ALERTA:</b> Un corte de energía masivo dejó sin luz la Planta B. Sos el único técnico disponible. Tenés exactamente <b>5 minutos</b> para atravesar las 6 salas, resolver los fallos y restaurar el suministro antes de que el generador de emergencia se agote.
+    </div>
+    <div class="reg-fields">
+      <div><label class="f-lbl">// NOMBRE DEL TÉCNICO</label><input class="f-inp" id="inp-name" placeholder="Tu nombre completo" type="text"></div>
+      <div><label class="f-lbl">// ÁREA / SEDE</label><input class="f-inp" id="inp-area" placeholder="Sede / Área" type="text"></div>
+      <div><label class="f-lbl">// CÓDIGO DE CLASE</label><input class="f-inp" id="inp-code" placeholder="Código del instructor" type="text"></div>
+    </div>
+    <button class="reg-btn" onclick="startGame()">⚡ INGRESAR A LA PLANTA</button>
+  </div>
+</div>
+
+<!-- ═══════ GAME ═══════ -->
+<div id="game">
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-brand">TEC⚡</div>
+    <div id="hud-dots"></div>
+    <div id="hud-timer">05:00</div>
+    <div class="hud-info">
+      <div class="hud-room" id="hud-rname">—</div>
+      <div class="hud-name" id="hud-pname">—</div>
+    </div>
+  </div>
+
+  <!-- AREA -->
+  <div id="area">
+    <div id="viewport">
+
+      <!-- ════ ROOM 1 — Sala de Breakers ════ -->
+      <div class="room" id="r1">
+        <!-- structural -->
+        <div class="r-ceiling-light"></div>
+        <div class="r-wall-l"></div><div class="r-wall-r"></div>
+        <!-- Cabinet (deco, behind hotspot) -->
+        <div class="brk-cabinet">
+          <div class="brk-label">TABLERO PRINCIPAL · ZONA B</div>
+          <div class="brk-grid">
+            <div class="brk trip"><div class="brk-handle"></div></div>
+            <div class="brk trip"><div class="brk-handle"></div></div>
+            <div class="brk"><div class="brk-handle"></div></div>
+            <div class="brk"><div class="brk-handle"></div></div>
+            <div class="brk trip"><div class="brk-handle"></div></div>
+            <div class="brk"><div class="brk-handle"></div></div>
+            <div class="brk trip"><div class="brk-handle"></div></div>
+            <div class="brk"><div class="brk-handle"></div></div>
+          </div>
+          <div class="brk-alarm"></div>
+        </div>
+        <!-- Fusebox on wall -->
+        <div class="fusebox">
+          <div class="fuse" style="top:10px;left:10px;"></div>
+          <div class="fuse" style="top:10px;left:25px;"></div>
+          <div class="fuse" style="top:10px;left:40px;"></div>
+          <div class="fuse" style="top:38px;left:10px;"></div>
+          <div class="fuse" style="top:38px;left:25px;"></div>
+          <div class="fuse" style="top:38px;left:40px;"></div>
+          <div class="fuse" style="top:66px;left:10px;"></div>
+          <div class="fuse" style="top:66px;left:25px;"></div>
+        </div>
+        <!-- Desk -->
+        <div class="r1-desk">
+          <div class="r1-desk-top"></div>
+          <div class="r1-desk-body">
+            <!-- Manual HOTSPOT -->
+            <div class="hs" style="top:4px;left:8px;width:56px;height:70px;" onclick="examine('r1-manual')">
+              <div class="manual-paper"></div>
+              <div class="hs-ring"></div><div class="hs-tip">MANUAL TÉCNICO</div>
+            </div>
+            <!-- Voltmeter HOTSPOT -->
+            <div class="hs" style="top:4px;left:78px;width:70px;height:52px;" onclick="examine('r1-meter')">
+              <div class="voltmeter"><div class="vm-dial"></div></div>
+              <div class="hs-ring"></div><div class="hs-tip">VOLTÍMETRO</div>
+            </div>
+          </div>
+        </div>
+        <!-- Warning sticker HOTSPOT -->
+        <div class="hs" style="top:52%;left:20%;width:56px;height:38px;" onclick="examine('r1-warning')">
+          <div class="warn-sticker">⚠️</div>
+          <div class="hs-ring"></div><div class="hs-tip">SEÑAL DE PELIGRO</div>
+        </div>
+        <!-- Cable on floor -->
+        <div class="cable"></div>
+        <!-- MAIN PUZZLE HOTSPOT — cabinet -->
+        <div class="hs" style="top:8%;left:50%;transform:translateX(-50%);width:262px;height:302px;" onclick="openPuz(1)">
+          <div class="hs-ring"></div><div class="hs-tip">🔌 TABLERO — INTERACTUAR</div>
+        </div>
+        <div class="r-floor"></div>
+        <div class="room-flash" id="flash-1"></div>
+      </div>
+
+      <!-- ════ ROOM 2 — Taller ════ -->
+      <div class="room" id="r2">
+        <div class="r-wall-l"></div><div class="r-wall-r"></div>
+        <div class="r2-light"></div>
+        <div class="r2-shelf"></div>
+        <!-- Schematic HOTSPOT -->
+        <div class="hs" style="top:18%;left:50%;transform:translateX(-50%);width:132px;height:112px;" onclick="examine('r2-schematic')">
+          <div class="r2-schematic">
+            <div style="font-size:7px;color:#5a5030;letter-spacing:1px;margin-bottom:5px;">ESQUEMA CIRCUITO SERIE</div>
+            <svg width="112" height="72" style="overflow:visible">
+              <line x1="4" y1="36" x2="20" y2="36" stroke="#5a4a28" stroke-width="1.5"/>
+              <rect x="20" y="28" width="14" height="16" fill="none" stroke="#8a7028" stroke-width="1.5"/>
+              <text x="22" y="24" fill="#7a8a28" font-size="7" font-family="monospace">R</text>
+              <line x1="34" y1="36" x2="52" y2="36" stroke="#5a4a28" stroke-width="1.5"/>
+              <circle cx="59" cy="36" r="7" fill="none" stroke="#8a7028" stroke-width="1.5"/>
+              <text x="54" y="24" fill="#7a8a28" font-size="7" font-family="monospace">CARGA</text>
+              <line x1="66" y1="36" x2="106" y2="36" stroke="#5a4a28" stroke-width="1.5"/>
+              <line x1="4" y1="58" x2="106" y2="58" stroke="#5a4a28" stroke-width="1"/>
+              <line x1="4" y1="36" x2="4" y2="58" stroke="#5a4a28" stroke-width="1"/>
+              <line x1="106" y1="36" x2="106" y2="58" stroke="#5a4a28" stroke-width="1"/>
+              <text x="6" y="28" fill="#5a9a38" font-size="7" font-family="monospace">V+</text>
+              <text x="4" y="70" fill="#3a3820" font-size="6" font-family="monospace">FUENTE → R → CARGA</text>
+            </svg>
+          </div>
+          <div class="hs-ring"></div><div class="hs-tip">ESQUEMA ELÉCTRICO</div>
+        </div>
+        <!-- Workbench -->
+        <div class="r2-wb">
+          <div class="r2-wb-top"></div>
+          <div class="r2-wb-body">
+            <!-- Toolbox HOTSPOT -->
+            <div class="hs" style="top:5px;left:14px;width:76px;height:50px;" onclick="examine('r2-toolbox')">
+              <div class="toolbox">🔧</div>
+              <div class="hs-ring"></div><div class="hs-tip">CAJA DE HERRAMIENTAS</div>
+            </div>
+            <!-- Assembly PUZZLE HOTSPOT -->
+            <div class="hs" style="top:3px;right:14px;width:98px;height:54px;" onclick="openPuz(2)">
+              <div class="assemble-spot"><div style="font-size:22px;">⚙️</div><span>ENSAMBLAR</span></div>
+              <div class="hs-ring"></div><div class="hs-tip">⚙️ MESA DE ENSAMBLADO</div>
+            </div>
+          </div>
+        </div>
+        <div class="r-floor"></div>
+        <div class="room-flash" id="flash-2"></div>
+      </div>
+
+      <!-- ════ ROOM 3 — Checkpoint ════ -->
+      <div class="room" id="r3">
+        <div class="r-wall-l"></div><div class="r-wall-r"></div>
+        <!-- Monitor (deco) -->
+        <div class="r3-monitor">
+          <div class="r3-monitor-inner">
+            <div style="font-size:11px;letter-spacing:3px;color:#2040a0;">SISTEMA DE CONTROL</div>
+            <div style="font-size:26px;color:#3060c0;text-shadow:0 0 18px rgba(60,120,255,.5);">🔒</div>
+            <div style="font-size:8px;color:#1a2060;letter-spacing:2px;">ACCESO RESTRINGIDO</div>
+          </div>
+          <div class="r3-scanline"></div>
+        </div>
+        <!-- Keypad PUZZLE HOTSPOT -->
+        <div class="hs" style="top:12%;right:8%;width:84px;height:124px;" onclick="openPuz(3)">
+          <div class="r3-keypad">
+            <div style="font-size:7px;color:#2030a0;letter-spacing:1px;text-align:center;margin-bottom:6px;">VERIFICACIÓN</div>
+            <div class="r3-kp-grid">
+              <div class="kp-btn">1</div><div class="kp-btn">2</div><div class="kp-btn">3</div>
+              <div class="kp-btn">4</div><div class="kp-btn">5</div><div class="kp-btn">6</div>
+              <div class="kp-btn">7</div><div class="kp-btn">8</div><div class="kp-btn">9</div>
+            </div>
+          </div>
+          <div class="hs-ring" style="border-color:rgba(30,60,200,.5);box-shadow:0 0 14px rgba(30,60,200,.2);"></div>
+          <div class="hs-tip" style="border-color:#3060c0;color:#3060c0;">🖥️ TECLADO DE ACCESO</div>
+        </div>
+        <!-- Badge reader HOTSPOT -->
+        <div class="hs" style="top:52%;left:12%;width:52px;height:74px;" onclick="examine('r3-badge')">
+          <div class="r3-badge"><span style="font-size:18px;">🪪</span><div class="badge-light"></div></div>
+          <div class="hs-ring" style="border-color:rgba(30,60,200,.4);"></div>
+          <div class="hs-tip" style="border-color:#3060c0;color:#3060c0;">LECTOR DE CREDENCIAL</div>
+        </div>
+        <!-- Protocol HOTSPOT -->
+        <div class="hs" style="top:53%;right:14%;width:72px;height:92px;" onclick="examine('r3-protocol')">
+          <div class="r3-protocol">
+            <div style="font-size:7px;color:#2030a0;letter-spacing:1px;margin-bottom:3px;">PROTOCOLO</div>
+            <div style="height:1px;background:#1a1a3a;margin-bottom:3px;"></div>
+            <div style="font-size:7px;color:#1a1a40;line-height:1.9;">V=I×R<br>P=V×I<br>I=V/R<br>R=V/I</div>
+          </div>
+          <div class="hs-ring" style="border-color:rgba(30,60,200,.4);"></div>
+          <div class="hs-tip" style="border-color:#3060c0;color:#3060c0;">PROTOCOLO DE SEGURIDAD</div>
+        </div>
+        <div class="r-floor"></div>
+        <div class="room-flash" id="flash-3"></div>
+      </div>
+
+      <!-- ════ ROOM 4 — Tablero de Control ════ -->
+      <div class="room" id="r4">
+        <div class="r-wall-l"></div><div class="r-wall-r"></div>
+        <!-- Panel (deco) -->
+        <div class="r4-bigpanel">
+          <div class="r4-leds">
+            <div class="r4-led"><div style="width:7px;height:7px;border-radius:50%;background:#b82020;box-shadow:0 0 5px rgba(184,32,32,.6);"></div>S01</div>
+            <div class="r4-led"><div style="width:7px;height:7px;border-radius:50%;background:#c8820a;box-shadow:0 0 5px rgba(200,130,10,.5);"></div>S02</div>
+            <div class="r4-led"><div style="width:7px;height:7px;border-radius:50%;background:#1a3a1a;"></div>S03</div>
+            <div class="r4-led"><div style="width:7px;height:7px;border-radius:50%;background:#b82020;box-shadow:0 0 5px rgba(184,32,32,.6);"></div>S04</div>
+            <div class="r4-led"><div style="width:7px;height:7px;border-radius:50%;background:#c8820a;box-shadow:0 0 5px rgba(200,130,10,.5);"></div>S05</div>
+          </div>
+          <div class="r4-sw-row">
+            <div class="r4-sw"><div class="r4-sw-handle"></div><div class="r4-sw-lbl">TIERRA</div></div>
+            <div class="r4-sw"><div class="r4-sw-handle"></div><div class="r4-sw-lbl">PROT.</div></div>
+            <div class="r4-sw"><div class="r4-sw-handle"></div><div class="r4-sw-lbl">TENSIÓN</div></div>
+            <div class="r4-sw"><div class="r4-sw-handle"></div><div class="r4-sw-lbl">CARGA</div></div>
+            <div class="r4-sw"><div class="r4-sw-handle"></div><div class="r4-sw-lbl">MED.</div></div>
+          </div>
+        </div>
+        <!-- PANEL PUZZLE HOTSPOT -->
+        <div class="hs" style="top:6%;left:13%;right:13%;height:66%;" onclick="openPuz(4)">
+          <div class="hs-ring" style="border-color:rgba(60,60,200,.4);"></div>
+          <div class="hs-tip" style="border-color:#4040c0;color:#8080ff;">⚡ TABLERO DE ARRANQUE</div>
+        </div>
+        <!-- Logbook HOTSPOT -->
+        <div class="hs" style="bottom:29%;left:5%;width:62px;height:78px;" onclick="examine('r4-logbook')">
+          <div class="r4-logbook">
+            <div style="position:absolute;top:8px;left:8px;right:5px;height:1px;background:#2a2010;box-shadow:0 5px 0 #2a2010,0 10px 0 #2a2010,0 15px 0 #2a2010,0 20px 0 #2a2010;"></div>
+            <div style="position:absolute;bottom:5px;left:50%;transform:translateX(-50%);font-size:6px;color:#4a3a18;white-space:nowrap;letter-spacing:1px;">BITÁCORA</div>
+          </div>
+          <div class="hs-ring"></div><div class="hs-tip">📋 BITÁCORA</div>
+        </div>
+        <div class="r-floor"></div>
+        <div class="room-flash" id="flash-4"></div>
+      </div>
+
+      <!-- ════ ROOM 5 — Cableado ════ -->
+      <div class="room" id="r5">
+        <div class="r-wall-l"></div><div class="r-wall-r"></div>
+        <div class="r5-wallpanel">
+          <div class="r5-conduit"><div class="wire-r"></div><div class="wire-n"></div><div class="wire-g"></div></div>
+          <div style="position:absolute;bottom:14px;left:14px;right:14px;height:38px;background:#0e080e;border:1px solid #1a1018;display:flex;align-items:center;gap:5px;padding:0 8px;">
+            <div style="width:11px;height:18px;background:#180a18;border:1px solid #3a1a38;"></div>
+            <div style="width:11px;height:18px;background:#180a18;border:1px solid #3a1a38;"></div>
+            <div style="width:11px;height:18px;background:#180a18;border:1px solid #3a1a38;"></div>
+            <div style="width:11px;height:18px;background:#180a18;border:1px solid #3a1a38;"></div>
+          </div>
+        </div>
+        <!-- PANEL PUZZLE HOTSPOT -->
+        <div class="hs" style="top:10%;left:17%;right:17%;height:62%;" onclick="openPuz(5)">
+          <div class="hs-ring" style="border-color:rgba(120,30,120,.5);"></div>
+          <div class="hs-tip" style="border-color:#8030a0;color:#c060e0;">🔗 TABLERO DE CONEXIONES</div>
+        </div>
+        <!-- Danger label HOTSPOT -->
+        <div class="hs" style="bottom:30%;right:10%;width:70px;height:52px;" onclick="examine('r5-danger')">
+          <div class="r5-danger"><span style="font-size:14px;">⚡</span><span style="font-size:7px;color:#c06060;letter-spacing:1px;">ALTA TENSIÓN</span></div>
+          <div class="hs-ring" style="border-color:rgba(184,32,32,.5);"></div>
+          <div class="hs-tip" style="border-color:#b82020;color:#e04040;">⚠️ AVISO DE PELIGRO</div>
+        </div>
+        <div class="r-floor"></div>
+        <div class="room-flash" id="flash-5"></div>
+      </div>
+
+      <!-- ════ ROOM 6 — Bóveda ════ -->
+      <div class="room" id="r6">
+        <div class="r-wall-l"></div><div class="r-wall-r"></div>
+        <div class="r6-goldline"></div>
+        <!-- Vault door (deco) -->
+        <div class="vault-door">
+          <div class="vault-wheel">
+            <div class="vault-spoke-h"></div><div class="vault-spoke-v"></div><div class="vault-hub"></div>
+          </div>
+          <div class="vault-combo">
+            <div class="vault-digit">?</div><div class="vault-digit">?</div><div class="vault-digit">?</div>
+          </div>
+        </div>
+        <!-- VAULT PUZZLE HOTSPOT -->
+        <div class="hs" style="top:8%;left:50%;transform:translateX(-50%);width:252px;height:292px;" onclick="openPuz(6)">
+          <div class="hs-ring"></div><div class="hs-tip">🔐 BÓVEDA PRINCIPAL — ABRIR</div>
+        </div>
+        <!-- Note HOTSPOT -->
+        <div class="hs" style="bottom:30%;left:7%;width:72px;height:90px;" onclick="examine('r6-note')">
+          <div class="r6-note">
+            <div style="font-size:7px;color:#6a5830;letter-spacing:1px;margin-bottom:2px;">RECORDATORIO</div>
+            <div style="height:1px;background:#8a7040;margin-bottom:4px;"></div>
+            <div style="font-size:8px;color:#3a2810;line-height:1.6;font-family:'Courier Prime',cursive;">"R = V ÷ I<br>no olvidar<br>la Ley de<br>Ohm..."</div>
+          </div>
+          <div class="hs-ring"></div><div class="hs-tip">📝 NOTA</div>
+        </div>
+        <div class="r-floor"></div>
+        <div class="room-flash" id="flash-6"></div>
+      </div>
+
+      <!-- Cinematic overlay -->
+      <div id="cinematic">
+        <div class="cin-icon" id="cin-icon">🔓</div>
+        <div class="cin-title" id="cin-title">¡ACCESO CONCEDIDO!</div>
+        <div class="cin-sub" id="cin-sub">Avanzando a la siguiente sala...</div>
+      </div>
+
+      <!-- Examine overlay -->
+      <div id="exam-overlay" onclick="if(event.target===this)closeExamine()">
+        <div class="exam-card" id="exam-card">
+          <div class="exam-hdr">
+            <span class="exam-title" id="exam-title">—</span>
+            <button class="exam-close" onclick="closeExamine()">✕</button>
+          </div>
+          <div class="exam-body" id="exam-body"></div>
+        </div>
+      </div>
+
+      <!-- Puzzle overlay -->
+      <div id="puz-overlay" onclick="if(event.target===this)closePuz()">
+        <div class="puz-card" id="puz-card"></div>
+      </div>
+
+    </div><!-- /viewport -->
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="sb-tab">// REGISTRO DE ACTIVIDAD</div>
+      <div id="notebook">
+        <div class="nb-head">📋 PISTAS DESCUBIERTAS</div>
+        <div class="nb-body" id="nb-body"></div>
+      </div>
+      <div class="sb-log" id="sb-log"></div>
+    </div>
+
+  </div><!-- /area -->
+</div><!-- /game -->
+
+<!-- ═══════ WIN ═══════ -->
+<div id="scr-win">
+  <div class="end-icon">🏆</div>
+  <div class="end-title" style="color:var(--amber2);">¡Planta Restaurada!</div>
+  <div class="end-sub">// MISIÓN COMPLETADA · ENERGÍA RESTABLECIDA //</div>
+  <div class="end-stats">
+    <div class="stat-box"><span class="stat-v" id="w-time">—</span><span class="stat-l">TIEMPO FINAL</span></div>
+    <div class="stat-box"><span class="stat-v" id="w-rank">—</span><span class="stat-l">POSICIÓN</span></div>
+    <div class="stat-box"><span class="stat-v" id="w-name" style="font-size:18px;padding-top:6px;">—</span><span class="stat-l">TÉCNICO</span></div>
+  </div>
+  <div class="rank-panel">
+    <div class="rank-head">// RANKING DE SESIÓN</div>
+    <table><thead><tr><th>#</th><th>TÉCNICO</th><th>TIEMPO</th><th>ESTADO</th></tr></thead>
+    <tbody id="rank-win"></tbody></table>
+  </div>
+  <button class="retry-btn" onclick="location.reload()">↺ INTENTAR DE NUEVO</button>
+</div>
+
+<!-- ═══════ LOSE ═══════ -->
+<div id="scr-lose">
+  <div class="end-icon">💀</div>
+  <div class="end-title" style="color:var(--red2);">Generador Agotado</div>
+  <div class="end-sub">// TIEMPO EXPIRADO — SIN ENERGÍA //</div>
+  <div class="end-stats">
+    <div class="stat-box"><span class="stat-v" id="l-room" style="color:var(--red2);">—</span><span class="stat-l">SALA ALCANZADA</span></div>
+  </div>
+  <div class="rank-panel">
+    <div class="rank-head">// RANKING DE SESIÓN</div>
+    <table><thead><tr><th>#</th><th>TÉCNICO</th><th>TIEMPO</th><th>ESTADO</th></tr></thead>
+    <tbody id="rank-lose"></tbody></table>
+  </div>
+  <button class="retry-btn" onclick="location.reload()">↺ INTENTAR DE NUEVO</button>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   GAME DATA
+══════════════════════════════════════════ */
+const ROOMS = [
+  {
+    id:1, name:"SALA 1 · TABLERO DE BREAKERS",
+    intro:"Entrás a la sala de breakers. El tablero principal está en rojo — cuatro disyuntores disparados. Para resetearlos, el sistema exige verificar tu conocimiento técnico.",
+    puz:{
+      type:"tf", title:"Tablero de Breakers",
+      flavor:"El sistema de seguridad bloquea el reset manual. Verificá cada afirmación para habilitarlo. Un error y el sistema te rechaza — revisá los objetos de la sala si tenés dudas.",
+      qs:[
+        {q:"La resistencia de un conductor aumenta cuando sube la temperatura.", a:true},
+        {q:"En un circuito en paralelo, todos los componentes reciben el mismo voltaje.", a:true},
+        {q:"La corriente alterna (CA) fluye siempre en una sola dirección.", a:false},
+        {q:"El voltaje se mide en Amperios (A).", a:false},
+        {q:"Un fusible protege al circuito contra sobrecargas de corriente.", a:true},
+      ]
+    },
+    unlockMsg:"✅ Breakers reseteados. La puerta lateral se desbloquea.",
+    clues:["Los breakers disparados indican sobrecarga previa en los ramales B y D.", "El voltímetro marca 0V — sin tensión en el ramal activo."]
+  },
+  {
+    id:2, name:"SALA 2 · TALLER DE COMPONENTES",
+    intro:"Un generador de emergencia necesita ser ensamblado. Hay componentes esparcidos. Necesitás armar el circuito serie en el orden correcto para activarlo.",
+    puz:{
+      type:"combo", title:"Mesa de Ensamblado",
+      flavor:"Seleccioná los 3 componentes correctos en el orden del circuito serie: fuente de energía → elemento de control de corriente → carga. Mirá el esquema en la pared.",
+      objects:[
+        {id:"fuente",  label:"Fuente de tensión", icon:"🔋", ok:true, pos:0},
+        {id:"resist",  label:"Resistencia",        icon:"〰️", ok:true, pos:1},
+        {id:"carga",   label:"Carga (bombilla)",   icon:"💡", ok:true, pos:2},
+        {id:"cond",    label:"Condensador",        icon:"🔘", ok:false},
+        {id:"tierra",  label:"Cable de tierra",    icon:"🟡", ok:false},
+        {id:"intNC",   label:"Interruptor NC",     icon:"🔲", ok:false},
+      ]
+    },
+    unlockMsg:"✅ Generador encendido. Luz de emergencia activa.",
+    clues:["El esquema de la pared muestra: Fuente → R → Carga en serie.", "Manual de la caja: 'en serie: misma corriente en todos los elementos'."]
+  },
+  {
+    id:3, name:"SALA 3 · CONTROL DE SEGURIDAD",
+    intro:"Una puerta biométrica bloquea el sector C. El sistema acepta solo verificación técnica. Tres preguntas con una respuesta correcta cada una.",
+    puz:{
+      type:"mc", title:"Verificación de Seguridad",
+      flavor:"Respondé las 3 preguntas para desbloquear el acceso. Solo una respuesta es correcta por pregunta. El protocolo en la pared puede ayudarte.",
+      qs:[
+        {q:"¿Cuál es la unidad de medida de la potencia eléctrica?", opts:["Voltio (V)","Amperio (A)","Watt (W)","Ohm (Ω)"], a:2},
+        {q:"Resistencia de 10 Ω con 5 A de corriente circulando. ¿Cuál es la tensión?", opts:["2 V","15 V","50 V","0.5 V"], a:2},
+        {q:"¿Qué instrumento se usa para medir la corriente eléctrica?", opts:["Voltímetro","Amperímetro","Ohmímetro","Vatímetro"], a:1},
+      ]
+    },
+    unlockMsg:"✅ Identidad verificada. Acceso concedido al sector C.",
+    clues:["El protocolo dice: V=I×R, P=V×I. Unidades: V=Voltio, A=Amperio, W=Watt, Ω=Ohm.", "La credencial bloqueada requiere nivel técnico certificado."]
+  },
+  {
+    id:4, name:"SALA 4 · TABLERO DE ARRANQUE",
+    intro:"El tablero de control central requiere un arranque secuencial preciso. Un orden incorrecto puede causar cortocircuito. La bitácora tiene el protocolo.",
+    puz:{
+      type:"seq", title:"Secuencia de Arranque",
+      flavor:"Seleccioná los 5 pasos de arranque en el orden correcto del protocolo. Un error y la secuencia se reinicia. Mirá la bitácora antes de empezar.",
+      items:[
+        {id:"tierra",   label:"TIERRA",    icon:"⏚"},
+        {id:"protec",   label:"PROT.",     icon:"🛡"},
+        {id:"tension",  label:"TENSIÓN",   icon:"⚡"},
+        {id:"carga4",   label:"CARGA",     icon:"💡"},
+        {id:"medic",    label:"MEDICIÓN",  icon:"📊"},
+        {id:"reset",    label:"RESET",     icon:"🔄"},
+        {id:"manual4",  label:"MANUAL",    icon:"📋"},
+        {id:"auto",     label:"AUTO",      icon:"🤖"},
+      ],
+      correct:["tierra","protec","tension","carga4","medic"]
+    },
+    unlockMsg:"✅ Secuencia correcta. Todos los sistemas en línea.",
+    clues:["Bitácora: SIEMPRE tierra primero, nunca energizar sin protecciones activas.", "Orden estándar IEC: tierra → protección → tensión → carga → medición."]
+  },
+  {
+    id:5, name:"SALA 5 · SALA DE CABLEADO",
+    intro:"El tablero de distribución tiene todos los cables desconectados. Necesitás reconectar cada conductor a su destino correcto. Los colores del cableado son clave.",
+    puz:{
+      type:"wire", title:"Tablero de Conexiones",
+      flavor:"Conectá cada cable a su destino correcto. Hacé clic en un cable (izquierda) y luego en su destino (derecha). Una conexión incorrecta daña el sistema.",
+      left:[
+        {id:"fase",   label:"⚡ FASE (L)",   color:"#b82020"},
+        {id:"neutro", label:"○ NEUTRO (N)",  color:"#a0a0a0"},
+        {id:"pe",     label:"⏚ TIERRA (PE)", color:"#1a7a40"},
+        {id:"ctrl",   label:"◈ CONTROL",     color:"#c8820a"},
+      ],
+      right:[
+        {id:"motor",   label:"Motor M1"},
+        {id:"barra_n", label:"Barra N"},
+        {id:"barra_pe",label:"Barra PE"},
+        {id:"plc",     label:"Entrada PLC"},
+      ],
+      correct:{fase:"motor", neutro:"barra_n", pe:"barra_pe", ctrl:"plc"}
+    },
+    unlockMsg:"✅ Circuito cerrado correctamente. Distribución activa.",
+    clues:["FASE al motor (carga activa). NEUTRO al bus N. TIERRA al bus PE. CONTROL al PLC.", "Regla de oro: NUNCA conectar tierra con neutro — son sistemas independientes."]
+  },
+  {
+    id:6, name:"SALA 6 · BÓVEDA PRINCIPAL",
+    intro:"La bóveda central requiere el código numérico correcto. El código se obtiene resolviendo tres cálculos eléctricos con la Ley de Ohm. Sin código, la planta queda sin energía.",
+    puz:{
+      type:"calc", title:"Código de la Bóveda",
+      flavor:"Calculá los tres valores aplicando la Ley de Ohm (V=I×R). Ingresá solo el número, sin unidades.",
+      calcs:[
+        {q:"Resistencia de 20 Ω con 3 A de corriente. ¿Cuántos Voltios (V)?", hint:"V = R × I", ans:"60", unit:"V"},
+        {q:"Tensión de 120 V aplicada a 40 Ω. ¿Cuántos Amperios (A)?",       hint:"I = V / R", ans:"3",  unit:"A"},
+        {q:"Motor de 220 V que consume 11 A. ¿Cuántos Ohm (Ω)?",            hint:"R = V / I", ans:"20", unit:"Ω"},
+      ]
+    },
+    unlockMsg:"✅ ¡CÓDIGO CORRECTO! Bóveda abierta. Energía restablecida.",
+    clues:["La nota dice: R=V÷I — no olvidar la Ley de Ohm.", "Los tres cálculos son el código. Sin errores."]
+  }
+];
+
+const EXAMINE_DB = {
+  "r1-manual":{title:"Manual Técnico",body:"Abrís el manual. Subrayado en rojo: <b>«La resistencia AUMENTA con la temperatura. En paralelo: todos tienen el mismo voltaje. La CA ALTERNA su dirección. Voltaje = Voltios [V], no Amperios. Fusible = protege contra sobrecarga de corriente.»</b>"},
+  "r1-meter": {title:"Voltímetro",body:"Pantalla: <b>0.00 V</b>. Nota adhesiva pegada: <i>«Ramal B sin tensión desde el corte. El breaker 2 y 5 están en FALLA. Reset solo si los fundamentos son correctos.»</i>"},
+  "r1-warning":{title:"Señal de Advertencia",body:"Placa metálica: <b>⚠ ATENCIÓN 380V trifásico.</b> En letra pequeña: <i>«Verificá los conceptos ANTES de resetear: paralelo = mismo voltaje, CA = alterna, voltaje en Voltios.»</i>"},
+  "r2-schematic":{title:"Esquema Eléctrico",body:"El diagrama muestra con claridad el circuito serie: <b>FUENTE DE TENSIÓN → RESISTENCIA → CARGA (bombilla)</b>. Ese es el orden exacto. No incluye condensador ni interruptor NC."},
+  "r2-toolbox":{title:"Caja de Herramientas",body:"Dentro hay herramientas y una tarjeta plastificada: <b>«CIRCUITO SERIE: todos los elementos en la misma línea. Misma corriente pasa por todos. Orden: fuente → control → carga.»</b>"},
+  "r3-badge":  {title:"Lector de Credencial",body:"Pantalla roja: <b>ACCESO DENEGADO</b>. En letra pequeña: <i>«Credencial no válida. Alternativa disponible: verificación de conocimientos técnicos por teclado.»</i>"},
+  "r3-protocol":{title:"Protocolo de Seguridad",body:"Impreso en azul: <b>V = I × R (Ley de Ohm) | P = V × I | I = V/R | R = V/I</b>. Unidades: Voltio [V] · Amperio [A] · Ohm [Ω] · Watt [W]."},
+  "r4-logbook":{title:"Bitácora de Operaciones",body:"Última entrada en rojo: <b>«PROTOCOLO OBLIGATORIO: 1.Tierra  2.Protecciones  3.Tensión  4.Carga  5.Medición. Saltear pasos = CORTOCIRCUITO GARANTIZADO.»</b>"},
+  "r5-danger": {title:"Aviso Alta Tensión",body:"<b>⚡ PELIGRO:</b> Reglas de conexión: <b>FASE (rojo/marrón) → motor (carga activa). NEUTRO (azul) → barra N. TIERRA (verde/amarillo) → barra PE. CONTROL (naranja) → entrada PLC. NUNCA tierra al neutro.</b>"},
+  "r6-note":   {title:"Nota del Operador",body:"En lápiz: <i>«Acordate: tres cálculos con Ley de Ohm. V=R×I primero, después I=V/R, después R=V/I. Los tres resultados son el código. Sin errores.»</i>"},
+};
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+let G = {
+  player:'', room:1, timeLeft:300, tid:null,
+  s1:{}, s2:[], s3:{}, s4:[], s5:{w:{},sel:null}, s6:['','',''],
+  activePuz:0,
+};
+let sessionRanks=[
+  {n:'Carlos M.', t:'01:45', r:6, ok:true},
+  {n:'Laura P.',  t:'02:30', r:6, ok:true},
+  {n:'Marcos R.', t:'03:15', r:6, ok:true},
+];
+
+/* ══════════════════════════════════════════
+   TIMER
+══════════════════════════════════════════ */
+function startTimer(){
+  G.tid=setInterval(()=>{
+    G.timeLeft--;
+    const m=Math.floor(G.timeLeft/60).toString().padStart(2,'0');
+    const s=(G.timeLeft%60).toString().padStart(2,'0');
+    const el=document.getElementById('hud-timer');
+    el.textContent=`${m}:${s}`;
+    el.className=G.timeLeft<=60?'warn':'';
+    if(G.timeLeft<=0){clearInterval(G.tid);showLose();}
+  },1000);
+}
+function elapsed(){const e=300-G.timeLeft,m=Math.floor(e/60).toString().padStart(2,'0'),s=(e%60).toString().padStart(2,'0');return `${m}:${s}`;}
+
+/* ══════════════════════════════════════════
+   START
+══════════════════════════════════════════ */
+function startGame(){
+  const name=document.getElementById('inp-name').value.trim();
+  if(!name){alert('Ingresá tu nombre.');return;}
+  G.player=name;
+  G.area = document.getElementById('inp-area').value.trim() || 'Sin área';
+  G.code = document.getElementById('inp-code').value.trim() || 'LIBRE';
+  document.getElementById('scr-reg').style.display='none';
+  document.getElementById('game').classList.add('on');
+  document.getElementById('hud-pname').textContent='// '+name.toUpperCase();
+  buildDots();
+  goRoom(1);
+  startTimer();
+}
+
+/* ══════════════════════════════════════════
+   ROOM NAV
+══════════════════════════════════════════ */
+function goRoom(n){
+  G.room=n;
+  document.querySelectorAll('.room').forEach(r=>r.classList.remove('active'));
+  document.getElementById('r'+n).classList.add('active');
+  document.getElementById('hud-rname').textContent=ROOMS[n-1].name;
+  updateDots(n);
+  log(ROOMS[n-1].intro,'narr');
+  log('Inspeccioná la sala. Hacé clic en los objetos para examinarlos y en el puzzle para resolverlo.','sys');
+  ROOMS[n-1].clues.forEach((_,i)=>addLockedNote(n,i));
+}
+
+/* ══════════════════════════════════════════
+   EXAMINE
+══════════════════════════════════════════ */
+function examine(id){
+  const d=EXAMINE_DB[id]; if(!d) return;
+  const el=document.querySelector(`[onclick="examine('${id}')"]`);
+  if(el) el.classList.add('seen');
+  document.getElementById('exam-title').textContent=d.title;
+  document.getElementById('exam-body').innerHTML=d.body;
+  document.getElementById('exam-overlay').classList.add('open');
+  log(`<b>${d.title}:</b> ${d.body.replace(/<[^>]+>/g,'')}`, 'clue');
+  // reveal a locked note
+  const locked=document.querySelectorAll(`.nb-item.lock[data-room="${G.room}"]`);
+  if(locked.length) {locked[0].classList.remove('lock'); locked[0].querySelector('.nb-bull').textContent='▶';}
+}
+function closeExamine(){document.getElementById('exam-overlay').classList.remove('open');}
+
+/* ══════════════════════════════════════════
+   PUZZLE OPEN / CLOSE
+══════════════════════════════════════════ */
+function openPuz(n){
+  G.activePuz=n;
+  const p=ROOMS[n-1].puz;
+  let html=`<div class="puz-hdr"><span class="puz-tag">// SALA ${n} · ${p.type.toUpperCase()}</span><button class="puz-x" onclick="closePuz()">✕ CERRAR</button></div>
+    <div class="puz-body"><div class="puz-title">${p.title}</div><div class="puz-flavor">${p.flavor}</div>`;
+  if(p.type==='tf')   html+=buildTF(p,n);
+  if(p.type==='combo')html+=buildCombo(p,n);
+  if(p.type==='mc')   html+=buildMC(p,n);
+  if(p.type==='seq')  html+=buildSeq(p,n);
+  if(p.type==='wire') html+=buildWire(p,n);
+  if(p.type==='calc') html+=buildCalc(p,n);
+  html+=`</div><div id="puz-alert"></div>
+    <div class="puz-foot"><button class="pb sec" onclick="closePuz()">Cerrar</button><button class="pb pri" onclick="checkPuz(${n})">VERIFICAR ▶</button></div>`;
+  document.getElementById('puz-card').innerHTML=html;
+  document.getElementById('puz-overlay').classList.add('open');
+}
+function closePuz(){document.getElementById('puz-overlay').classList.remove('open'); G.activePuz=0;}
+function closePuzBg(e){if(e.target===document.getElementById('puz-overlay'))closePuz();}
+
+/* BUILD PUZZLE TYPES */
+function buildTF(p,n){
+  const a=G.s1;
+  return p.qs.map((q,i)=>`
+    <div style="margin-bottom:12px;">
+      <div class="qnum">AFIRMACIÓN ${String(i+1).padStart(2,'0')}</div>
+      <div class="qtext">${q.q}</div>
+      <div class="tf-row">
+        <div class="tf-btn ${a[i]===true?'vsel':''}" onclick="stf(${n},${i},true)">✓ VERDADERO</div>
+        <div class="tf-btn ${a[i]===false?'fsel':''}" onclick="stf(${n},${i},false)">✗ FALSO</div>
+      </div>
+    </div>`).join('');
+}
+function stf(n,i,v){G.s1[i]=v; openPuz(n);}
+
+function buildCombo(p,n){
+  const sel=G.s2;
+  return `<div style="margin-bottom:12px;"><div class="qnum" style="margin-bottom:6px;">COMPONENTES DISPONIBLES:</div>
+    <div class="combo-grid">${p.objects.map(o=>`
+      <div class="cb-item ${sel.includes(o.id)?'sel':''}" onclick="toggleCb('${o.id}')">
+        <div class="cb-icon">${o.icon}</div><div class="cb-lbl">${o.label}</div>
+      </div>`).join('')}</div>
+    <div class="qnum" style="margin-bottom:5px;">CIRCUITO (en orden):</div>
+    <div class="combo-track">
+      ${sel.length===0?'<span style="font-size:10px;color:var(--border);font-style:italic;">Seleccioná 3 componentes en orden...</span>':
+        sel.map(id=>{const o=p.objects.find(x=>x.id===id);return `<span class="seq-chip">${o.icon} ${o.label}</span>`;}).join('<span style="color:var(--amber);margin:0 3px;">→</span>')}
+    </div></div>`;
+}
+function toggleCb(id){
+  const i=G.s2.indexOf(id);
+  if(i>=0)G.s2.splice(i,1);
+  else{if(G.s2.length>=3){puzAlert('Solo podés seleccionar 3 componentes.','err');return;}G.s2.push(id);}
+  openPuz(G.activePuz);
+}
+
+function buildMC(p,n){
+  const a=G.s3;
+  return p.qs.map((q,i)=>`
+    <div style="margin-bottom:12px;">
+      <div class="qnum">PREGUNTA ${String(i+1).padStart(2,'0')}</div>
+      <div class="qtext">${q.q}</div>
+      ${q.opts.map((opt,j)=>`<div class="mc-row ${a[i]===j?'sel':''}" onclick="smc(${n},${i},${j})">
+        <span class="mc-let">${'ABCD'[j]}</span><span>${opt}</span></div>`).join('')}
+    </div>`).join('');
+}
+function smc(n,i,j){G.s3[i]=j; openPuz(n);}
+
+function buildSeq(p,n){
+  const seq=G.s4;
+  return `<div class="qnum" style="margin-bottom:7px;">SELECCIONÁ LOS 5 PASOS EN ORDEN:</div>
+    <div class="seq-grid">${p.items.map(it=>`
+      <div class="sq-btn ${seq.includes(it.id)?'in':''}" onclick="addSeq('${it.id}')">
+        <div class="sq-icon">${it.icon}</div><div class="sq-lbl">${it.label}</div>
+      </div>`).join('')}</div>
+    <div class="qnum" style="margin-bottom:5px;">SECUENCIA ACTUAL:</div>
+    <div class="seq-track">${seq.length===0?'<span class="seq-empty">Seleccioná pasos en orden...</span>':
+      seq.map((id,i)=>{const it=p.items.find(x=>x.id===id);return `<span class="seq-chip">${i+1}. ${it.label}</span>`;}).join('')}
+    </div>
+    <button class="pb sec" style="font-size:10px;margin-bottom:4px;" onclick="G.s4=[];openPuz(G.activePuz)">↺ Reiniciar</button>`;
+}
+function addSeq(id){if(!G.s4.includes(id))G.s4.push(id); openPuz(G.activePuz);}
+
+function buildWire(p,n){
+  const w=G.s5.wires||G.s5.w, sel=G.s5.sel||G.s5.selectedLeft;
+  let svgLines='';
+  p.left.forEach((lw,li)=>{
+    const rid=w[lw.id]; if(!rid) return;
+    const ri=p.right.findIndex(x=>x.id===rid);
+    const ly=li*53+26, ry=ri*53+26;
+    svgLines+=`<path d="M0,${ly} C40,${ly} 40,${ry} 56,${ry}" stroke="${lw.color}" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+  });
+  return `<div class="wire-grid">
+    <div class="wire-col">${p.left.map(lw=>`
+      <div class="wn-l ${w[lw.id]?'done':''} ${sel===lw.id?'act':''}" style="border-left:4px solid ${lw.color}" onclick="pickWL('${lw.id}')">${lw.label}</div>`).join('')}
+    </div>
+    <svg class="wire-svg" viewBox="0 0 56 212"><g>${svgLines}</g></svg>
+    <div class="wire-col">${p.right.map(rw=>`
+      <div class="wn-r ${Object.values(w).includes(rw.id)?'done':''}" onclick="pickWR('${rw.id}')">${rw.label}</div>`).join('')}
+    </div>
+  </div>
+  <button class="pb sec" style="font-size:10px;margin-top:8px;" onclick="G.s5={w:{},sel:null};openPuz(G.activePuz)">↺ Desconectar todo</button>
+  ${sel?`<div style="margin-top:7px;font-size:10px;color:var(--amber);">Cable: <b>${p.left.find(x=>x.id===sel).label}</b> — elegí destino</div>`:''}`;
+}
+function pickWL(id){G.s5.sel=G.s5.sel===id?null:id; openPuz(G.activePuz);}
+function pickWR(id){
+  if(!G.s5.sel){puzAlert('Seleccioná primero un cable de la izquierda.','err');return;}
+  for(const k in G.s5.w)if(G.s5.w[k]===id)delete G.s5.w[k];
+  G.s5.w[G.s5.sel]=id; G.s5.sel=null; openPuz(G.activePuz);
+}
+
+function buildCalc(p,n){
+  return p.calcs.map((c,i)=>`
+    <div class="calc-block">
+      <div class="qnum">CÁLCULO ${String(i+1).padStart(2,'0')}</div>
+      <div class="qtext" style="margin-bottom:4px;">${c.q}</div>
+      <div class="calc-hint">Pista: ${c.hint}</div>
+      <input class="calc-inp" id="ci-${i}" type="number" value="${G.s6[i]||''}" placeholder="?" oninput="G.s6[${i}]=this.value.trim()">
+    </div>`).join('');
+}
+
+/* ══════════════════════════════════════════
+   CHECK PUZZLES
+══════════════════════════════════════════ */
+function checkPuz(n){
+  const p=ROOMS[n-1].puz; let ok=false;
+  if(p.type==='tf'){
+    if(Object.keys(G.s1).length<p.qs.length){puzAlert('Respondé todas las afirmaciones.','err');return;}
+    ok=p.qs.every((q,i)=>G.s1[i]===q.a);
+    if(!ok){puzAlert('❌ Respuesta incorrecta. El sistema te bloquea. Examiná los objetos de la sala para encontrar pistas.','err');return;}
+  }
+  else if(p.type==='combo'){
+    if(G.s2.length<3){puzAlert('Seleccioná 3 componentes en orden.','err');return;}
+    const correct=p.objects.filter(o=>o.ok).sort((a,b)=>a.pos-b.pos).map(o=>o.id);
+    ok=G.s2.join(',')=== correct.join(',');
+    if(!ok){puzAlert('❌ Combinación o orden incorrecto. Revisá el esquema en la pared.','err');return;}
+  }
+  else if(p.type==='mc'){
+    if(Object.keys(G.s3).length<p.qs.length){puzAlert('Respondé todas las preguntas.','err');return;}
+    ok=p.qs.every((q,i)=>G.s3[i]===q.a);
+    if(!ok){puzAlert('❌ Respuesta incorrecta. Revisá el protocolo en la pared.','err');return;}
+  }
+  else if(p.type==='seq'){
+    if(G.s4.length<p.correct.length){puzAlert(`Necesitás seleccionar exactamente ${p.correct.length} pasos.`,'err');return;}
+    ok=p.correct.every((id,i)=>G.s4[i]===id);
+    if(!ok){puzAlert('❌ Secuencia incorrecta. Riesgo de cortocircuito. Consultá la bitácora.','err');return;}
+  }
+  else if(p.type==='wire'){
+    if(Object.keys(G.s5.w).length<p.left.length){puzAlert('Conectá todos los cables.','err');return;}
+    ok=p.left.every(lw=>G.s5.w[lw.id]===p.correct[lw.id]);
+    if(!ok){puzAlert('❌ Conexión incorrecta. Revisá el aviso de alta tensión en la sala.','err');return;}
+  }
+  else if(p.type==='calc'){
+    p.calcs.forEach((_,i)=>{const el=document.getElementById('ci-'+i);if(el)G.s6[i]=el.value.trim();});
+    ok=p.calcs.every((c,i)=>G.s6[i]===c.ans);
+    if(!ok){puzAlert('❌ Cálculo incorrecto. Revisá la nota en la sala y calculá de nuevo.','err');return;}
+  }
+  // SUCCESS
+  closePuz();
+  unlockRoom(n);
+}
+
+function puzAlert(msg,type){
+  const el=document.getElementById('puz-alert');
+  if(el) el.innerHTML=`<div class="palert ${type}">${msg}</div>`;
+}
+
+/* ══════════════════════════════════════════
+   UNLOCK
+══════════════════════════════════════════ */
+function unlockRoom(n){
+  log(ROOMS[n-1].unlockMsg,'ok');
+  revealAllNotes(n);
+  const fl=document.getElementById('flash-'+n);
+  if(fl){fl.classList.add('go');setTimeout(()=>fl.classList.remove('go'),600);}
+  const cin=document.getElementById('cinematic');
+  document.getElementById('cin-icon').textContent= n<6?'🔓':'🏆';
+  document.getElementById('cin-title').textContent= n<6?'¡ACCESO CONCEDIDO!':'¡BÓVEDA ABIERTA!';
+  document.getElementById('cin-sub').textContent=   n<6?`Avanzando a la sala ${n+1}...`:'Misión completada.';
+  cin.classList.add('show');
+  setTimeout(()=>{cin.classList.remove('show'); n<6?goRoom(n+1):(clearInterval(G.tid),showWin());},1800);
+}
+
+/* ══════════════════════════════════════════
+   LOG + NOTEBOOK
+══════════════════════════════════════════ */
+function log(msg,type=''){
+  const sl=document.getElementById('sb-log');
+  const d=document.createElement('div');
+  d.className='log-line '+(type||'');
+  d.innerHTML=msg;
+  sl.insertBefore(d, sl.firstChild);
+}
+function addLockedNote(roomN,idx){
+  const nb=document.getElementById('nb-body');
+  const d=document.createElement('div');
+  d.className='nb-item lock'; d.dataset.room=roomN; d.dataset.idx=idx;
+  d.innerHTML='<span class="nb-bull">○</span><span>• • • • • • • • •</span>';
+  nb.appendChild(d);
+}
+function revealAllNotes(n){
+  const room=ROOMS[n-1];
+  document.querySelectorAll(`.nb-item.lock[data-room="${n}"]`).forEach((el,i)=>{
+    el.classList.remove('lock');
+    el.querySelector('.nb-bull').textContent='▶';
+    el.querySelector('span:last-child').textContent=room.clues[i]||'';
+  });
+}
+
+/* ══════════════════════════════════════════
+   HUD DOTS
+══════════════════════════════════════════ */
+function buildDots(){
+  document.getElementById('hud-dots').innerHTML=
+    Array.from({length:6},(_,i)=>`<div class="dot" id="d${i+1}"></div>`).join('');
+}
+function updateDots(cur){
+  for(let i=1;i<=6;i++){
+    const el=document.getElementById('d'+i); if(!el) continue;
+    el.className='dot';
+    if(i<cur) el.classList.add('done');
+    else if(i===cur) el.classList.add('now');
+  }
+}
+
+/* ══════════════════════════════════════════
+   GOOGLE SHEETS INTEGRATION
+   Pegá tu URL de Apps Script aquí:
+══════════════════════════════════════════ */
+const SHEETS_URL = "https://script.google.com/macros/s/AKfycbzIyezC-gHM9f6oIEQRDG2N4XuHNLyFFci1ZzYay3zb1838w1eMEfB20dWG7x9QznNL6w/exec";
+
+async function sendResult(completado){
+  if(!SHEETS_URL || SHEETS_URL === "PEGAR_URL_AQUI") return; // no configurado aún
+  const e = 300 - G.timeLeft;
+  try {
+    await fetch(SHEETS_URL, {
+      method: "POST",
+      mode:   "no-cors", // necesario para Apps Script
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        nombre:         G.player,
+        area:           document.getElementById('inp-area')?.value?.trim() || G.area || "",
+        codigoClase:    document.getElementById('inp-code')?.value?.trim() || G.code || "",
+        completado:     completado,
+        tiempoFinal:    elapsed(),
+        tiempoSegundos: e,
+        salaAlcanzada:  G.room,
+      })
+    });
+  } catch(err){
+    console.warn("No se pudo guardar el resultado:", err);
+  }
+}
+
+/* ══════════════════════════════════════════
+   WIN / LOSE
+══════════════════════════════════════════ */
+function addMe(done){
+  sessionRanks=sessionRanks.filter(x=>!x.me);
+  sessionRanks.push({n:G.player, t:elapsed(), r:G.room, ok:done, me:true});
+  sessionRanks.sort((a,b)=>{
+    if(a.ok&&b.ok) return a.t.localeCompare(b.t);
+    if(a.ok) return -1; if(b.ok) return 1;
+    return b.r-a.r;
+  });
+}
+function renderRank(tbodyId){
+  const medals=['🥇','🥈','🥉'];
+  document.getElementById(tbodyId).innerHTML=sessionRanks.map((r,i)=>`
+    <tr class="${r.me?'me':''}">
+      <td>${medals[i]||'#'+(i+1)}</td>
+      <td>${r.n}</td><td>${r.t}</td>
+      <td>${r.ok?'✓ COMPLETO':'Sala '+r.r}</td>
+    </tr>`).join('');
+}
+function showWin(){
+  addMe(true);
+  sendResult(true);
+  const pos=sessionRanks.findIndex(x=>x.me)+1;
+  document.getElementById('w-time').textContent=elapsed();
+  document.getElementById('w-rank').textContent='#'+pos;
+  document.getElementById('w-name').textContent=G.player;
+  renderRank('rank-win');
+  document.getElementById('scr-win').classList.add('show');
+}
+function showLose(){
+  addMe(false);
+  sendResult(false);
+  document.getElementById('l-room').textContent='Sala '+G.room;
+  renderRank('rank-lose');
+  document.getElementById('scr-lose').classList.add('show');
+}
+</script>
+</body>
+</html>
